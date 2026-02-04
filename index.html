@@ -1,4 +1,33 @@
-import React, { useState, useEffect } from 'react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wolf Customer Oracle - AI-Powered Support Intelligence</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide-react@latest"></script>
+  <style>
+    body { 
+      margin: 0; 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    #root { min-height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { AlertCircle, TrendingUp, MessageSquare, Clock, Search, Users, Mail, Copy, ChevronRight, FileCode } = lucide;
+
+    const WolfCustomerOracle = () => {
+    import React, { useState, useEffect } from 'react';
 import { AlertCircle, TrendingUp, MessageSquare, Clock, Search, Users, Mail, Copy, ChevronRight, FileCode } from 'lucide-react';
 
 const WolfCustomerOracle = () => {
@@ -1339,3 +1368,10 @@ Respond ONLY with valid JSON.`
 };
 
 export default WolfCustomerOracle;
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<WolfCustomerOracle />);
+  </script>
+</body>
+</html>
