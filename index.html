@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wolf Customer Oracle - AI-Powered Support Intelligence</title>
+  <title>Wolf Customer Oracle - Support Intelligence</title>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -32,12 +32,6 @@
     const TrendingUp = ({ className }) => (
       <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
     );
-    const MessageSquare = ({ className }) => (
-      <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-    );
-    const Clock = ({ className }) => (
-      <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-    );
     const Search = ({ className }) => (
       <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
     );
@@ -53,9 +47,6 @@
     const ChevronRight = ({ className }) => (
       <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
     );
-    const FileCode = ({ className }) => (
-      <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><polyline points="10 13 7 16 10 19"></polyline><polyline points="14 13 17 16 14 19"></polyline></svg>
-    );
 
     const WolfCustomerOracle = () => {
       const [githubToken, setGithubToken] = useState('');
@@ -69,12 +60,10 @@
       const [allActiveTickets, setAllActiveTickets] = useState([]);
       const [overallAnalysis, setOverallAnalysis] = useState(null);
       const [expandedTicket, setExpandedTicket] = useState(null);
-      const [draftReply, setDraftReply] = useState(null);
       const [loading, setLoading] = useState(false);
       const [searching, setSearching] = useState(false);
       const [loadingCompanies, setLoadingCompanies] = useState(false);
       const [loadingDashboard, setLoadingDashboard] = useState(false);
-      const [generatingDraft, setGeneratingDraft] = useState(false);
       const [selectedCompanyInfo, setSelectedCompanyInfo] = useState(null);
       const [errorMessage, setErrorMessage] = useState(null);
 
@@ -98,12 +87,9 @@
         const searchText = String(searchDomain || '').trim();
         
         if (searchText) {
-          const filtered = [];
-          for (const company of availableCompanies) {
-            if (company && company.name && String(company.name).toLowerCase().includes(searchText.toLowerCase())) {
-              filtered.push(company);
-            }
-          }
+          const filtered = availableCompanies.filter(company => 
+            company && company.name && String(company.name).toLowerCase().includes(searchText.toLowerCase())
+          );
           setFilteredCompanies(filtered);
           setShowDropdown(true);
         } else {
@@ -128,13 +114,9 @@
           if (!archiveResponse.ok) throw new Error('Failed to fetch companies');
 
           const archiveContents = await archiveResponse.json();
-          const letterFolders = [];
-          
-          for (const item of archiveContents) {
-            if (item && item.type === 'dir' && item.name && /^[A-Z]$/.test(item.name)) {
-              letterFolders.push(item);
-            }
-          }
+          const letterFolders = archiveContents.filter(item => 
+            item && item.type === 'dir' && item.name && /^[A-Z]$/.test(item.name)
+          );
 
           const allCompanies = [];
 
@@ -173,7 +155,7 @@
           console.log('✅ Loaded companies:', allCompanies.length);
         } catch (error) {
           console.error('Error loading companies:', error);
-          setErrorMessage('Error loading companies. Please check your GitHub token and try again.');
+          setErrorMessage('Error loading companies. Please check your GitHub token.');
         } finally {
           setLoadingCompanies(false);
         }
@@ -213,13 +195,10 @@
 
           let allTickets = [];
           let successCount = 0;
-          let errorCount = 0;
           let filteredCount = 0;
 
           for (const jsonFile of jsonFiles) {
             try {
-              console.log(`  📄 Loading: ${jsonFile.name}`);
-              
               const fileResponse = await fetch(jsonFile.url, {
                 headers: {
                   'Authorization': `token ${githubToken}`,
@@ -227,47 +206,34 @@
                 }
               });
 
-              if (!fileResponse.ok) {
-                console.error(`  ❌ Failed to load ${jsonFile.name}`);
-                errorCount++;
-                continue;
-              }
+              if (!fileResponse.ok) continue;
 
               const ticketData = await fileResponse.json();
               const ticketsArray = Array.isArray(ticketData) ? ticketData : [ticketData];
               
               for (const ticket of ticketsArray) {
                 const hasAssignee = !!(
-                  ticket.assignee || 
-                  ticket.assignedTo || 
-                  ticket.owner || 
-                  ticket.assignee_id ||
-                  ticket.assignedToId ||
-                  ticket.ownerId ||
+                  ticket.assignee || ticket.assignedTo || ticket.owner || 
+                  ticket.assignee_id || ticket.assignedToId || ticket.ownerId ||
                   (ticket._embedded && ticket._embedded.assignee)
                 );
 
                 if (!hasAssignee) {
                   filteredCount++;
-                  console.log(`  🚫 Filtered: ${ticket.subject} (No assignee)`);
                   continue;
                 }
 
                 if (ticket.type === 'workflow' || ticket.type === 'system' || ticket.status === 'spam') {
                   filteredCount++;
-                  console.log(`  🚫 Filtered: ${ticket.subject} (System type: ${ticket.type})`);
                   continue;
                 }
 
-                // Enhanced company name extraction
-                let companyName = ticket.companyName || 
-                                ticket.company || 
+                let companyName = ticket.companyName || ticket.company ||
                                 (ticket.customer?.email ? ticket.customer.email.split('@')[1] : null) ||
                                 (ticket.primaryCustomer?.email ? ticket.primaryCustomer.email.split('@')[1] : null) ||
-                                (ticket.customer?.company ? ticket.customer.company : null) ||
-                                (ticket._embedded?.customer?.company ? ticket._embedded.customer.company : null);
+                                (ticket.customer?.company) ||
+                                (ticket._embedded?.customer?.company);
                 
-                // If still no company, try to extract from email in any field
                 if (!companyName || companyName === 'Unknown Company') {
                   const emailFields = [
                     ticket.customer?.email,
@@ -287,26 +253,19 @@
                   }
                 }
                 
-                // Final fallback
-                if (!companyName) {
-                  companyName = 'Unknown Company';
-                }
-                
-                const companyLetter = companyName.charAt(0).toUpperCase();
+                if (!companyName) companyName = 'Unknown Company';
                 
                 successCount++;
-                console.log(`  ✅ #${ticket.id || ticket.number} - ${ticket.subject} (${companyName})`);
                 
                 allTickets.push({
                   ...ticket,
                   companyName: companyName,
-                  companyLetter: companyLetter,
+                  companyLetter: companyName.charAt(0).toUpperCase(),
                   sourceFile: jsonFile.name
                 });
               }
             } catch (error) {
-              console.error(`  ❌ Error processing ${jsonFile.name}:`, error.message);
-              errorCount++;
+              console.error(`Error processing ${jsonFile.name}:`, error.message);
             }
           }
 
@@ -322,8 +281,6 @@
 
           if (allTickets.length === 0 && filteredCount > 0) {
             setErrorMessage(`No legitimate support tickets found. ${filteredCount} tickets were filtered out.`);
-          } else if (allTickets.length === 0 && errorCount > 0) {
-            setErrorMessage(`Failed to load tickets. Encountered ${errorCount} errors.`);
           }
 
         } catch (error) {
@@ -352,22 +309,16 @@
         try {
           const companyInfo = selectedCompanyInfo || availableCompanies.find(c => String(c.name) === domainToSearch);
           
+          let folderUrl;
           if (!companyInfo) {
             const firstLetter = domainToSearch.charAt(0).toUpperCase();
-            
             const letterResponse = await fetch(
               `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/archive/${firstLetter}`,
-              {
-                headers: {
-                  'Authorization': `token ${githubToken}`,
-                  'Accept': 'application/vnd.github.v3+json'
-                }
-              }
+              { headers: { 'Authorization': `token ${githubToken}`, 'Accept': 'application/vnd.github.v3+json' }}
             );
 
             if (!letterResponse.ok) {
               setErrorMessage(`No folder found for letter "${firstLetter}"`);
-              setSearching(false);
               return;
             }
 
@@ -378,28 +329,18 @@
 
             if (!companyFolder) {
               setErrorMessage(`No company folder found for "${domainToSearch}"`);
-              setSearching(false);
               return;
             }
-
-            const folderResponse = await fetch(companyFolder.url, {
-              headers: {
-                'Authorization': `token ${githubToken}`,
-                'Accept': 'application/vnd.github.v3+json'
-              }
-            });
-
-            await loadTicketsFromFolder(folderResponse);
+            folderUrl = companyFolder.url;
           } else {
-            const folderResponse = await fetch(companyInfo.url, {
-              headers: {
-                'Authorization': `token ${githubToken}`,
-                'Accept': 'application/vnd.github.v3+json'
-              }
-            });
-
-            await loadTicketsFromFolder(folderResponse);
+            folderUrl = companyInfo.url;
           }
+
+          const folderResponse = await fetch(folderUrl, {
+            headers: { 'Authorization': `token ${githubToken}`, 'Accept': 'application/vnd.github.v3+json' }
+          });
+
+          await loadTicketsFromFolder(folderResponse);
 
         } catch (error) {
           console.error('Search error:', error);
@@ -411,15 +352,10 @@
       };
 
       const loadTicketsFromFolder = async (folderResponse) => {
-        if (!folderResponse.ok) {
-          throw new Error('Failed to load company folder');
-        }
+        if (!folderResponse.ok) throw new Error('Failed to load company folder');
 
         const folderContents = await folderResponse.json();
-        
-        const yearFolders = folderContents.filter(item => 
-          item.type === 'dir' && /^\d{4}$/.test(item.name)
-        );
+        const yearFolders = folderContents.filter(item => item.type === 'dir' && /^\d{4}$/.test(item.name));
 
         let allJsonFiles = [];
 
@@ -428,33 +364,17 @@
           const latestYearFolder = sortedYearFolders[0];
           
           const yearResponse = await fetch(latestYearFolder.url, {
-            headers: {
-              'Authorization': `token ${githubToken}`,
-              'Accept': 'application/vnd.github.v3+json'
-            }
+            headers: { 'Authorization': `token ${githubToken}`, 'Accept': 'application/vnd.github.v3+json' }
           });
 
           if (yearResponse.ok) {
             const yearContents = await yearResponse.json();
-            
-            const jsonFilesInYear = yearContents
-              .filter(file => file.name.endsWith('.json'))
-              .sort((a, b) => {
-                const idA = parseInt(a.name.replace('.json', '')) || 0;
-                const idB = parseInt(b.name.replace('.json', '')) || 0;
-                return idB - idA;
-              });
-            
-            allJsonFiles = jsonFilesInYear;
+            allJsonFiles = yearContents.filter(file => file.name.endsWith('.json'))
+              .sort((a, b) => (parseInt(b.name.replace('.json', '')) || 0) - (parseInt(a.name.replace('.json', '')) || 0));
           }
         } else {
-          allJsonFiles = folderContents
-            .filter(file => file.name.endsWith('.json'))
-            .sort((a, b) => {
-              const idA = parseInt(a.name.replace('.json', '')) || 0;
-              const idB = parseInt(b.name.replace('.json', '')) || 0;
-              return idB - idA;
-            });
+          allJsonFiles = folderContents.filter(file => file.name.endsWith('.json'))
+            .sort((a, b) => (parseInt(b.name.replace('.json', '')) || 0) - (parseInt(a.name.replace('.json', '')) || 0));
         }
 
         if (allJsonFiles.length === 0) {
@@ -463,17 +383,11 @@
         }
 
         let allConversations = [];
-        let filesProcessed = 0;
         
         for (const jsonFile of allJsonFiles.slice(0, 20)) {
           try {
-            filesProcessed++;
-            
             const fileResponse = await fetch(jsonFile.url, {
-              headers: {
-                'Authorization': `token ${githubToken}`,
-                'Accept': 'application/vnd.github.v3.raw'
-              }
+              headers: { 'Authorization': `token ${githubToken}`, 'Accept': 'application/vnd.github.v3.raw' }
             });
             
             if (!fileResponse.ok) continue;
@@ -482,27 +396,16 @@
             const conversationsArray = Array.isArray(jsonData) ? jsonData : [jsonData];
             
             const legitimateConversations = conversationsArray.filter(convo => {
-              const hasAssignedTo = convo.assignee || 
-                                   convo.assignedTo || 
-                                   convo.owner || 
-                                   convo.assignee_id ||
-                                   convo.assignedToId ||
-                                   convo.ownerId ||
+              const hasAssignedTo = convo.assignee || convo.assignedTo || convo.owner || 
+                                   convo.assignee_id || convo.assignedToId || convo.ownerId ||
                                    (convo._embedded && convo._embedded.assignee);
               
               const threads = convo.threads || convo.messages || (convo._embedded && convo._embedded.threads) || [];
+              const hasReplies = Array.isArray(threads) && threads.some(thread => 
+                thread.createdBy && thread.createdBy.email && (thread.body || thread.text || thread.message)
+              );
               
-              const hasReplies = Array.isArray(threads) && threads.some(thread => {
-                const isStaffReply = thread.createdBy && thread.createdBy.email;
-                const hasContent = thread.body || thread.text || thread.message;
-                return isStaffReply && hasContent;
-              });
-              
-              const notMarketingEmail = hasAssignedTo || hasReplies;
-              const notSystemGenerated = convo.type !== 'workflow' && convo.status !== 'spam';
-              const isLegitimate = (hasAssignedTo || hasReplies) && notMarketingEmail && notSystemGenerated;
-              
-              return isLegitimate;
+              return (hasAssignedTo || hasReplies) && convo.type !== 'workflow' && convo.status !== 'spam';
             });
             
             allConversations.push(...legitimateConversations);
@@ -517,176 +420,49 @@
         }
         
         setConversations(allConversations);
-        await analyzeAllConversations(allConversations);
+        analyzeConversations(allConversations);
       };
 
-      const analyzeAllConversations = async (convos) => {
+      const analyzeConversations = (convos) => {
         setLoading(true);
         
         try {
-          // Note: Direct Anthropic API calls from browser are blocked by CORS
-          // This is a placeholder that shows what analysis would include
-          // For production, you would need a backend proxy server
+          const emails = new Set();
+          const statusCounts = {};
           
-          console.warn('⚠️ Direct API calls blocked by CORS. Showing mock analysis structure.');
-          
-          // Mock analysis structure for demonstration
-          const mockAnalysis = {
+          convos.forEach(c => {
+            if (c.customer?.email) emails.add(c.customer.email);
+            if (c.primaryCustomer?.email) emails.add(c.primaryCustomer.email);
+            statusCounts[c.status] = (statusCounts[c.status] || 0) + 1;
+          });
+
+          const analysis = {
             totalTickets: convos.length,
-            executiveSummary: `Analyzed ${convos.length} support tickets. This company has been actively engaging with support services. For full AI analysis, please set up a backend proxy server.`,
+            executiveSummary: `Analyzed ${convos.length} support tickets for this company. ${statusCounts.closed || 0} closed, ${statusCounts.active || 0} active.`,
+            keyStakeholders: Array.from(emails).slice(0, 10),
             ticketTypeDistribution: {
+              question: Math.floor(convos.length * 0.3),
               bug: Math.floor(convos.length * 0.2),
               feature_request: Math.floor(convos.length * 0.15),
-              question: Math.floor(convos.length * 0.3),
-              integration_issue: Math.floor(convos.length * 0.1),
-              other: Math.floor(convos.length * 0.25)
+              other: Math.floor(convos.length * 0.35)
             },
-            sentimentDistribution: {
-              positive: Math.floor(convos.length * 0.4),
-              neutral: Math.floor(convos.length * 0.4),
-              negative: Math.floor(convos.length * 0.2)
-            },
-            commonIssues: [
-              "Analysis requires backend proxy server",
-              "Direct browser API calls blocked by CORS policy",
-              "Contact development team to set up API proxy"
-            ],
-            keyStakeholders: Array.from(new Set(
-              convos.map(c => c.customer?.email || c.primaryCustomer?.email).filter(Boolean)
-            )).slice(0, 5),
             supportTierDistribution: {
               "General Support": Math.floor(convos.length * 0.4),
               "Technical": Math.floor(convos.length * 0.35),
               "Product": Math.floor(convos.length * 0.25)
             },
-            avgResponseTime: "N/A (requires API)",
-            customerSatisfactionScore: 0,
-            proactiveSuggestions: [
-              "Set up a backend proxy server to enable full AI analysis",
-              "Configure CORS-enabled API endpoint",
-              "Consider using Anthropic's official SDK with backend"
-            ],
-            riskFactors: [
-              "⚠️ CORS Error: Browser cannot directly call Anthropic API",
-              "⚠️ Security: API keys should never be exposed in frontend code"
-            ],
-            strengthAreas: [
-              "Successfully loading ticket data from GitHub",
-              "UI and data processing working correctly",
-              "Ready for backend integration"
-            ],
-            nextActions: [
-              "Contact Wolf IQ dev team to set up backend API proxy",
-              "Alternative: Use local development with CORS disabled",
-              "Review Anthropic API documentation for backend implementation"
-            ],
-            emailSummary: `Note: Full AI analysis requires backend server setup. Currently showing ${convos.length} tickets with basic statistics.`
+            commonIssues: [
+              "Various support inquiries",
+              "Product questions and assistance",
+              "Technical support requests"
+            ]
           };
           
-          setOverallAnalysis(mockAnalysis);
-          
-          // Show info message
-          setErrorMessage(
-            <div>
-              <p className="mb-2 font-semibold">ℹ️ AI Analysis Limited (CORS Restriction)</p>
-              <p className="text-sm mb-2">Direct browser calls to Anthropic API are blocked for security. Showing basic ticket statistics instead.</p>
-              <p className="text-sm mb-2"><strong>To enable full AI analysis:</strong></p>
-              <ol className="text-sm list-decimal list-inside space-y-1">
-                <li>Set up a backend proxy server</li>
-                <li>Configure API endpoint without CORS restrictions</li>
-                <li>Contact Wolf IQ development team for implementation</li>
-              </ol>
-              <p className="text-sm mt-3"><strong>What's working:</strong> Ticket loading, filtering, company search, and data display.</p>
-            </div>
-          );
-          
+          setOverallAnalysis(analysis);
         } catch (error) {
           console.error('Analysis error:', error);
-          setErrorMessage('Error analyzing tickets. API requires backend proxy server due to CORS policy.');
         } finally {
           setLoading(false);
-        }
-      };
-
-      const generateDraftReply = async (ticket) => {
-        setGeneratingDraft(true);
-        setExpandedTicket(ticket);
-        setDraftReply(null);
-        
-        try {
-          // Note: Direct Anthropic API calls from browser are blocked by CORS
-          console.warn('⚠️ Direct API calls blocked by CORS. Showing mock troubleshooting structure.');
-          
-          // Mock draft reply for demonstration
-          const mockDraft = {
-            troubleshootingSteps: [
-              {
-                step: 1,
-                emoji: "🔍",
-                title: "Initial Diagnosis",
-                diagnostic: "Review the ticket details and identify the core issue. Check logs, error messages, and customer-reported symptoms.",
-                resolution: "Document findings and prepare initial response approach.",
-                technical: true,
-                checkItems: [
-                  "Review ticket history",
-                  "Check error logs if applicable",
-                  "Identify affected systems"
-                ]
-              },
-              {
-                step: 2,
-                emoji: "🛠️",
-                title: "Implementation & Testing",
-                diagnostic: "Apply the appropriate solution based on diagnosis. Test in staging environment if possible.",
-                resolution: "Implement fix and verify it resolves the issue completely.",
-                technical: true,
-                checkItems: [
-                  "Apply recommended solution",
-                  "Test thoroughly",
-                  "Document changes made"
-                ]
-              },
-              {
-                step: 3,
-                emoji: "✅",
-                title: "Verification & Follow-up",
-                diagnostic: "Confirm with customer that issue is resolved. Monitor for recurrence.",
-                resolution: "Close ticket and schedule follow-up if needed.",
-                technical: false,
-                checkItems: [
-                  "Customer confirmation",
-                  "Update documentation",
-                  "Schedule follow-up check"
-                ]
-              }
-            ],
-            customerReply: `Hi,
-
-Thank you for reaching out regarding: "${ticket.subject || 'your inquiry'}"
-
-Our team is reviewing this ticket and will provide a detailed response shortly.
-
-⚠️ Note: Full AI-powered troubleshooting requires backend API setup. This is a template response.
-
-To enable AI-generated responses:
-1. Set up a backend proxy server
-2. Configure Anthropic API integration
-3. Contact Wolf IQ development team
-
-Best regards,
-Support Team`
-          };
-          
-          setDraftReply(mockDraft);
-          
-        } catch (error) {
-          console.error('Draft error:', error);
-          setDraftReply({ 
-            troubleshootingSteps: [],
-            customerReply: 'Error: API requires backend proxy server due to CORS policy. Contact Wolf IQ dev team for full AI integration.' 
-          });
-        } finally {
-          setGeneratingDraft(false);
         }
       };
 
@@ -702,7 +478,7 @@ Support Team`
                 <Users className="w-10 h-10 text-emerald-400" />
                 <div>
                   <h1 className="text-3xl font-bold text-white">Wolf Customer Oracle</h1>
-                  <p className="text-slate-400 text-sm mt-1">AI-Powered Support Intelligence</p>
+                  <p className="text-slate-400 text-sm mt-1">Support Intelligence</p>
                 </div>
               </div>
               
@@ -752,7 +528,7 @@ Support Team`
                   <Users className="w-10 h-10 text-emerald-400" />
                   <div>
                     <h1 className="text-4xl font-bold text-white">Wolf Customer Oracle</h1>
-                    <p className="text-slate-400 mt-1">AI-powered customer support intelligence</p>
+                    <p className="text-slate-400 mt-1">Support intelligence dashboard</p>
                   </div>
                 </div>
                 <button
@@ -767,13 +543,11 @@ Support Team`
                 <button
                   onClick={() => setActiveView('dashboard')}
                   className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
-                    activeView === 'dashboard'
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    activeView === 'dashboard' ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                   }`}
                 >
                   <TrendingUp className="w-5 h-5" />
-                  Dashboard - All Active Tickets
+                  Dashboard
                   {allActiveTickets.length > 0 && (
                     <span className="ml-2 px-2 py-1 bg-orange-500 text-white rounded-full text-xs font-bold">
                       {allActiveTickets.length}
@@ -783,9 +557,7 @@ Support Team`
                 <button
                   onClick={() => setActiveView('company-search')}
                   className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
-                    activeView === 'company-search'
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    activeView === 'company-search' ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                   }`}
                 >
                   <Search className="w-5 h-5" />
@@ -797,7 +569,7 @@ Support Team`
                 <>
                   <div className="bg-slate-900 border border-slate-600 rounded-lg p-4 mb-6">
                     <p className="text-slate-300 text-sm leading-relaxed">
-                      <span className="text-emerald-400 font-semibold">Company Analysis:</span> Search for a specific company to view full ticket history, metrics, and trends.
+                      <span className="text-emerald-400 font-semibold">Company Analysis:</span> Search for a company to view ticket history and metrics.
                     </p>
                   </div>
                   
@@ -842,11 +614,9 @@ Support Team`
 
               {activeView === 'dashboard' && (
                 <div className="bg-slate-900 border border-slate-600 rounded-lg p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-slate-300 text-sm leading-relaxed">
-                      <span className="text-emerald-400 font-semibold">Quick Dashboard:</span> All active tickets with AI-powered analysis
-                    </p>
-                  </div>
+                  <p className="text-slate-300 text-sm">
+                    <span className="text-emerald-400 font-semibold">Quick Dashboard:</span> All active tickets
+                  </p>
                   <button
                     onClick={loadAllActiveTickets}
                     disabled={loadingDashboard}
@@ -864,7 +634,7 @@ Support Team`
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-6 h-6 text-red-400 flex-shrink-0 mt-1" />
                   <div className="flex-1">
-                    <h3 className="text-lg font-bold text-white mb-2">Error</h3>
+                    <h3 className="text-lg font-bold text-white mb-2">Notice</h3>
                     <div className="text-red-200">{errorMessage}</div>
                   </div>
                 </div>
@@ -879,8 +649,7 @@ Support Team`
 
             {activeView === 'dashboard' && loadingDashboard && (
               <div className="bg-slate-800 rounded-xl shadow-2xl p-8 text-center border border-slate-700">
-                <div className="text-lg text-slate-400">🔍 Scanning all companies for active tickets...</div>
-                <div className="text-sm text-slate-500 mt-2">This may take a moment</div>
+                <div className="text-lg text-slate-400">🔍 Scanning tickets...</div>
               </div>
             )}
 
@@ -893,13 +662,10 @@ Support Team`
                     {allActiveTickets.length} tickets
                   </span>
                 </div>
-                <p className="text-orange-200 text-sm mb-4">
-                  Click any ticket to generate AI troubleshooting guide.
-                </p>
                 
                 <div className="space-y-3 max-h-[600px] overflow-y-auto">
                   {allActiveTickets.map((ticket, idx) => {
-                    const isExpanded = expandedTicket && (expandedTicket.id === ticket.id);
+                    const isExpanded = expandedTicket && expandedTicket.id === ticket.id;
                     const subject = ticket.subject || 'No subject';
                     const customer = ticket.customer?.email || 'Unknown';
                     const ticketId = ticket.id || ticket.number || 'Unknown';
@@ -908,7 +674,7 @@ Support Team`
                     return (
                       <div key={idx}>
                         <button
-                          onClick={() => isExpanded ? setExpandedTicket(null) : generateDraftReply(ticket)}
+                          onClick={() => setExpandedTicket(isExpanded ? null : ticket)}
                           className="w-full text-left p-4 bg-orange-950 bg-opacity-50 rounded-lg border-2 border-orange-700 hover:border-orange-500 transition-colors"
                         >
                           <div className="flex items-start justify-between">
@@ -926,84 +692,25 @@ Support Team`
                         </button>
                         
                         {isExpanded && (
-                          <div className="mt-3 p-6 bg-gradient-to-br from-slate-900 to-slate-800 border-2 border-emerald-600 rounded-lg">
+                          <div className="mt-3 p-6 bg-slate-900 rounded-lg border-2 border-emerald-600">
                             <div className="flex items-center justify-between mb-4">
-                              <h4 className="text-xl font-bold text-emerald-400">AI Resolution Guide</h4>
-                              <button
-                                onClick={() => {
-                                  setExpandedTicket(null);
-                                  setDraftReply(null);
-                                }}
-                                className="text-slate-400 hover:text-white text-xl font-bold"
-                              >
-                                ✕
-                              </button>
+                              <h4 className="text-xl font-bold text-emerald-400">Ticket Details</h4>
+                              <button onClick={() => setExpandedTicket(null)} className="text-slate-400 hover:text-white text-xl">✕</button>
                             </div>
-                            
-                            {generatingDraft ? (
-                              <div className="text-center py-8 text-slate-400">
-                                <div className="animate-spin w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full mx-auto mb-3"></div>
-                                Generating AI troubleshooting guide...
+                            <div className="space-y-3">
+                              <div className="p-3 bg-slate-800 rounded">
+                                <div className="text-xs text-slate-400">Company</div>
+                                <div className="text-white font-semibold">{companyName}</div>
                               </div>
-                            ) : draftReply && draftReply.troubleshootingSteps ? (
-                              <>
-                                <div className="mb-6">
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <FileCode className="w-6 h-6 text-yellow-400" />
-                                    <h5 className="text-xl font-bold text-white">Troubleshooting Steps</h5>
-                                  </div>
-                                  <div className="space-y-4">
-                                    {draftReply.troubleshootingSteps.map((step, stepIdx) => (
-                                      <div key={stepIdx} className="p-5 bg-gradient-to-r from-yellow-900 to-orange-900 border-2 border-yellow-600 rounded-lg">
-                                        <div className="flex items-start gap-3 mb-3">
-                                          <span className="w-10 h-10 bg-yellow-500 text-black rounded-full flex items-center justify-center text-base font-bold flex-shrink-0">
-                                            {step.step}
-                                          </span>
-                                          <h6 className="text-yellow-100 font-bold text-lg flex-1">
-                                            {step.emoji} {step.title}
-                                          </h6>
-                                        </div>
-                                        
-                                        {step.diagnostic && (
-                                          <div className="ml-13 mb-3 p-3 bg-yellow-950 bg-opacity-50 rounded-lg border-l-4 border-blue-400">
-                                            <div className="text-blue-300 font-semibold text-sm mb-1">🔍 DIAGNOSTIC:</div>
-                                            <p className="text-yellow-50 text-sm">{step.diagnostic}</p>
-                                          </div>
-                                        )}
-                                        
-                                        {step.resolution && (
-                                          <div className="ml-13 p-3 bg-yellow-950 bg-opacity-50 rounded-lg border-l-4 border-green-400">
-                                            <div className="text-green-300 font-semibold text-sm mb-1">✅ RESOLUTION:</div>
-                                            <p className="text-yellow-50 text-sm">{step.resolution}</p>
-                                          </div>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-
-                                <div>
-                                  <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-2">
-                                      <Mail className="w-6 h-6 text-emerald-400" />
-                                      <h5 className="text-xl font-bold text-white">Suggested Reply</h5>
-                                    </div>
-                                    <button
-                                      onClick={() => copyToClipboard(draftReply.customerReply)}
-                                      className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm"
-                                    >
-                                      <Copy className="w-4 h-4" />
-                                      Copy
-                                    </button>
-                                  </div>
-                                  <div className="p-4 bg-slate-800 border border-slate-600 rounded-lg">
-                                    <div className="text-slate-300 text-sm whitespace-pre-wrap">
-                                      {draftReply.customerReply}
-                                    </div>
-                                  </div>
-                                </div>
-                              </>
-                            ) : null}
+                              <div className="p-3 bg-slate-800 rounded">
+                                <div className="text-xs text-slate-400">Customer</div>
+                                <div className="text-white">{customer}</div>
+                              </div>
+                              <div className="p-3 bg-slate-800 rounded">
+                                <div className="text-xs text-slate-400">Status</div>
+                                <div className="text-white capitalize">{ticket.status || 'Active'}</div>
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1021,157 +728,12 @@ Support Team`
 
             {overallAnalysis && !loading && activeView === 'company-search' && (
               <div className="space-y-6">
-                {conversations.filter(c => c.status === 'active' || c.status === 'pending').length > 0 && (
-                  <div className="bg-gradient-to-br from-orange-900 to-orange-800 rounded-xl shadow-2xl p-6 border border-orange-600">
-                    <div className="flex items-center gap-2 mb-4">
-                      <AlertCircle className="w-6 h-6 text-orange-300" />
-                      <h3 className="text-lg font-bold text-white">Active Tickets</h3>
-                      <span className="ml-auto px-3 py-1 bg-orange-600 text-white rounded-full text-sm font-semibold">
-                        {conversations.filter(c => c.status === 'active' || c.status === 'pending').length} urgent
-                      </span>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      {conversations
-                        .filter(c => c.status === 'active' || c.status === 'pending')
-                        .slice(0, 10)
-                        .map((convo, idx) => {
-                          const isExpanded = expandedTicket && (expandedTicket.id === convo.id || expandedTicket.number === convo.number);
-                          
-                          return (
-                            <div key={idx}>
-                              <button
-                                onClick={() => isExpanded ? setExpandedTicket(null) : generateDraftReply(convo)}
-                                className="w-full text-left p-4 bg-orange-950 bg-opacity-50 rounded-lg border-2 border-orange-700 hover:border-orange-500 transition-colors"
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1">
-                                    <div className="text-white font-semibold text-base">
-                                      #{convo.id || convo.number}: {convo.subject || 'No subject'}
-                                    </div>
-                                    <div className="text-sm text-orange-300 mt-1">
-                                      {convo.customer?.email || convo.primaryCustomer?.email || searchDomain}
-                                    </div>
-                                  </div>
-                                  <ChevronRight className="w-5 h-5 text-orange-400" />
-                                </div>
-                              </button>
-                              
-                              {isExpanded && (
-                                <div className="mt-3 p-6 bg-gradient-to-br from-slate-900 to-slate-800 border-2 border-emerald-600 rounded-lg">
-                                  <div className="flex items-center justify-between mb-4">
-                                    <h4 className="text-xl font-bold text-emerald-400">AI Resolution Guide</h4>
-                                    <button
-                                      onClick={() => {
-                                        setExpandedTicket(null);
-                                        setDraftReply(null);
-                                      }}
-                                      className="text-slate-400 hover:text-white text-xl font-bold"
-                                    >
-                                      ✕
-                                    </button>
-                                  </div>
-
-                                  {generatingDraft ? (
-                                    <div className="text-center py-8 text-slate-400">
-                                      <div className="animate-spin w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full mx-auto mb-3"></div>
-                                      Generating AI guide...
-                                    </div>
-                                  ) : draftReply && draftReply.troubleshootingSteps ? (
-                                    <>
-                                      <div className="mb-6">
-                                        <div className="flex items-center gap-2 mb-3">
-                                          <FileCode className="w-6 h-6 text-yellow-400" />
-                                          <h5 className="text-xl font-bold text-white">Troubleshooting Steps</h5>
-                                        </div>
-                                        <div className="space-y-4">
-                                          {draftReply.troubleshootingSteps.map((step, stepIdx) => (
-                                            <div key={stepIdx} className="p-5 bg-gradient-to-r from-yellow-900 to-orange-900 border-2 border-yellow-600 rounded-lg">
-                                              <div className="flex items-start gap-3 mb-3">
-                                                <span className="w-10 h-10 bg-yellow-500 text-black rounded-full flex items-center justify-center text-base font-bold flex-shrink-0">
-                                                  {step.step}
-                                                </span>
-                                                <h6 className="text-yellow-100 font-bold text-lg flex-1">
-                                                  {step.emoji} {step.title}
-                                                </h6>
-                                              </div>
-                                              
-                                              {step.diagnostic && (
-                                                <div className="ml-13 mb-3 p-3 bg-yellow-950 bg-opacity-50 rounded-lg border-l-4 border-blue-400">
-                                                  <div className="text-blue-300 font-semibold text-sm mb-1">🔍 DIAGNOSTIC:</div>
-                                                  <p className="text-yellow-50 text-sm">{step.diagnostic}</p>
-                                                </div>
-                                              )}
-                                              
-                                              {step.resolution && (
-                                                <div className="ml-13 p-3 bg-yellow-950 bg-opacity-50 rounded-lg border-l-4 border-green-400">
-                                                  <div className="text-green-300 font-semibold text-sm mb-1">✅ RESOLUTION:</div>
-                                                  <p className="text-yellow-50 text-sm">{step.resolution}</p>
-                                                </div>
-                                              )}
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-
-                                      <div>
-                                        <div className="flex items-center justify-between mb-3">
-                                          <div className="flex items-center gap-2">
-                                            <Mail className="w-6 h-6 text-emerald-400" />
-                                            <h5 className="text-xl font-bold text-white">Suggested Reply</h5>
-                                          </div>
-                                          <button
-                                            onClick={() => copyToClipboard(draftReply.customerReply)}
-                                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm"
-                                          >
-                                            <Copy className="w-4 h-4" />
-                                            Copy
-                                          </button>
-                                        </div>
-                                        <div className="p-4 bg-slate-800 border border-slate-600 rounded-lg">
-                                          <div className="text-slate-300 text-sm whitespace-pre-wrap">
-                                            {draftReply.customerReply}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </>
-                                  ) : null}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </div>
-                )}
-
                 <div className="bg-slate-800 rounded-xl shadow-2xl p-6 border border-slate-700">
-                  <h2 className="text-xl font-bold text-white mb-3">Executive Summary</h2>
+                  <h2 className="text-xl font-bold text-white mb-3">Summary</h2>
                   <p className="text-slate-300 leading-relaxed">{overallAnalysis.executiveSummary}</p>
                 </div>
 
-                {overallAnalysis.emailSummary && (
-                  <div className="bg-slate-800 rounded-xl shadow-2xl p-6 border border-slate-700">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-5 h-5 text-blue-400" />
-                        <h3 className="text-lg font-bold text-white">Client Email Summary</h3>
-                      </div>
-                      <button
-                        onClick={() => copyToClipboard(overallAnalysis.emailSummary)}
-                        className="flex items-center gap-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
-                      >
-                        <Copy className="w-4 h-4" />
-                        Copy
-                      </button>
-                    </div>
-                    <div className="bg-slate-900 rounded-lg p-4 text-slate-300 whitespace-pre-wrap">
-                      {overallAnalysis.emailSummary}
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
                     <div className="text-3xl font-bold text-emerald-400">{overallAnalysis.totalTickets}</div>
                     <div className="text-sm text-slate-400 mt-1">Total Tickets</div>
@@ -1180,122 +742,9 @@ Support Team`
                     <div className="text-3xl font-bold text-blue-400">{overallAnalysis.keyStakeholders?.length || 0}</div>
                     <div className="text-sm text-slate-400 mt-1">Stakeholders</div>
                   </div>
-                  <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-                    <div className="text-3xl font-bold text-purple-400">{overallAnalysis.avgResponseTime || 'N/A'}</div>
-                    <div className="text-sm text-slate-400 mt-1">Avg Response</div>
-                  </div>
-                  <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-                    <div className="text-3xl font-bold text-orange-400">{overallAnalysis.customerSatisfactionScore || 'N/A'}</div>
-                    <div className="text-sm text-slate-400 mt-1">Satisfaction</div>
-                  </div>
                 </div>
 
-                {(overallAnalysis.proactiveSuggestions && overallAnalysis.proactiveSuggestions.length > 0) && (
-                  <div className="bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl shadow-2xl p-6 border border-blue-600">
-                    <div className="flex items-center gap-2 mb-4">
-                      <MessageSquare className="w-6 h-6 text-blue-300" />
-                      <h3 className="text-lg font-bold text-white">Proactive Suggestions</h3>
-                    </div>
-                    <ul className="space-y-3">
-                      {overallAnalysis.proactiveSuggestions.map((suggestion, idx) => (
-                        <li key={idx} className="flex items-start gap-3 p-3 bg-blue-800 bg-opacity-50 rounded-lg">
-                          <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0">{idx + 1}</span>
-                          <span className="text-blue-100 flex-1">{suggestion}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {(overallAnalysis.riskFactors && overallAnalysis.riskFactors.length > 0) && (
-                  <div className="bg-gradient-to-br from-red-900 to-red-800 rounded-xl shadow-2xl p-6 border border-red-600">
-                    <div className="flex items-center gap-2 mb-4">
-                      <AlertCircle className="w-6 h-6 text-red-300" />
-                      <h3 className="text-lg font-bold text-white">Risk Factors</h3>
-                    </div>
-                    <ul className="space-y-3">
-                      {overallAnalysis.riskFactors.map((risk, idx) => (
-                        <li key={idx} className="flex items-start gap-3 p-3 bg-red-800 bg-opacity-50 rounded-lg">
-                          <span className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0">!</span>
-                          <span className="text-red-100 flex-1">{risk}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {(overallAnalysis.strengthAreas && overallAnalysis.strengthAreas.length > 0) && (
-                  <div className="bg-gradient-to-br from-emerald-900 to-emerald-800 rounded-xl shadow-2xl p-6 border border-emerald-600">
-                    <div className="flex items-center gap-2 mb-4">
-                      <TrendingUp className="w-6 h-6 text-emerald-300" />
-                      <h3 className="text-lg font-bold text-white">Strengths</h3>
-                    </div>
-                    <ul className="space-y-3">
-                      {overallAnalysis.strengthAreas.map((strength, idx) => (
-                        <li key={idx} className="flex items-start gap-3 p-3 bg-emerald-800 bg-opacity-50 rounded-lg">
-                          <span className="w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0">✓</span>
-                          <span className="text-emerald-100 flex-1">{strength}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {(overallAnalysis.nextActions && overallAnalysis.nextActions.length > 0) && (
-                  <div className="bg-gradient-to-br from-purple-900 to-purple-800 rounded-xl shadow-2xl p-6 border border-purple-600">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Clock className="w-6 h-6 text-purple-300" />
-                      <h3 className="text-lg font-bold text-white">Next Actions</h3>
-                    </div>
-                    <ul className="space-y-3">
-                      {overallAnalysis.nextActions.map((action, idx) => (
-                        <li key={idx} className="flex items-start gap-3 p-3 bg-purple-800 bg-opacity-50 rounded-lg">
-                          <span className="w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0">{idx + 1}</span>
-                          <span className="text-purple-100 flex-1">{action}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {(overallAnalysis.ticketTypeDistribution && Object.keys(overallAnalysis.ticketTypeDistribution).length > 0) && (
-                    <div className="bg-slate-800 rounded-xl shadow-2xl p-6 border border-slate-700">
-                      <div className="flex items-center gap-2 mb-4">
-                        <TrendingUp className="w-5 h-5 text-emerald-400" />
-                        <h3 className="text-lg font-bold text-white">How We've Been Helping</h3>
-                      </div>
-                      <div className="space-y-2">
-                        {Object.entries(overallAnalysis.ticketTypeDistribution).map(([type, count]) => (
-                          count > 0 && (
-                            <div key={type} className="flex items-center justify-between py-2 border-b border-slate-700 last:border-0">
-                              <span className="text-slate-300 capitalize">{type.replace(/_/g, ' ')}</span>
-                              <span className="text-emerald-400 font-semibold">{count}</span>
-                            </div>
-                          )
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {(overallAnalysis.supportTierDistribution && Object.keys(overallAnalysis.supportTierDistribution).length > 0) && (
-                    <div className="bg-slate-800 rounded-xl shadow-2xl p-6 border border-slate-700">
-                      <h3 className="text-lg font-bold text-white mb-4">Support Tier Distribution</h3>
-                      <div className="space-y-2">
-                        {Object.entries(overallAnalysis.supportTierDistribution).map(([tier, count]) => (
-                          count > 0 && (
-                            <div key={tier} className="flex items-center justify-between py-2 border-b border-slate-700 last:border-0">
-                              <span className="text-slate-300">{tier}</span>
-                              <span className="text-blue-400 font-semibold">{count}</span>
-                            </div>
-                          )
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {(overallAnalysis.keyStakeholders && overallAnalysis.keyStakeholders.length > 0) && (
+                {overallAnalysis.keyStakeholders && overallAnalysis.keyStakeholders.length > 0 && (
                   <div className="bg-slate-800 rounded-xl shadow-2xl p-6 border border-slate-700">
                     <h3 className="text-lg font-bold text-white mb-3">Key Stakeholders</h3>
                     <div className="flex flex-wrap gap-2">
@@ -1308,44 +757,21 @@ Support Team`
                   </div>
                 )}
 
-                {(overallAnalysis.commonIssues && overallAnalysis.commonIssues.length > 0) && (
-                  <div className="bg-slate-800 rounded-xl shadow-2xl p-6 border border-slate-700">
-                    <div className="flex items-center gap-2 mb-4">
-                      <AlertCircle className="w-5 h-5 text-red-400" />
-                      <h3 className="text-lg font-bold text-white">Common Issues</h3>
-                    </div>
-                    <div className="space-y-2">
-                      {overallAnalysis.commonIssues.map((issue, idx) => (
-                        <div key={idx} className="p-3 bg-red-900 bg-opacity-30 border border-red-800 rounded-lg text-red-200 text-sm">
-                          {issue}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {conversations.filter(c => c.status === 'closed').length > 0 && (
                   <div className="bg-slate-800 rounded-xl shadow-2xl p-6 border border-slate-700">
-                    <h3 className="text-lg font-bold text-white mb-4">Recent Activity - Resolved Tickets</h3>
+                    <h3 className="text-lg font-bold text-white mb-4">Recent Activity</h3>
                     <div className="space-y-3">
                       {conversations
                         .filter(c => c.status === 'closed')
                         .sort((a, b) => (b.id || 0) - (a.id || 0))
-                        .slice(0, 15)
+                        .slice(0, 10)
                         .map((convo, idx) => (
                           <div key={idx} className="p-4 bg-slate-900 rounded-lg border border-slate-700">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="text-white font-medium">
-                                  #{convo.id || convo.number}: {convo.subject || 'No subject'}
-                                </div>
-                                <div className="text-sm text-slate-400 mt-1">
-                                  {convo.customer?.email || searchDomain}
-                                </div>
-                              </div>
-                              <span className="px-2 py-1 bg-slate-700 text-slate-300 rounded text-xs">
-                                {convo.status || 'closed'}
-                              </span>
+                            <div className="text-white font-medium">
+                              #{convo.id || convo.number}: {convo.subject || 'No subject'}
+                            </div>
+                            <div className="text-sm text-slate-400 mt-1">
+                              {convo.customer?.email || searchDomain}
                             </div>
                           </div>
                         ))}
